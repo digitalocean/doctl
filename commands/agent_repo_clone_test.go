@@ -81,15 +81,13 @@ func repoTestSession(id string) *do.HostedAgentSession {
 	}}
 }
 
-// expectRepoSession stubs create, readiness and the GitHub connect check.
+// expectRepoSession stubs create and readiness. Without the token opt-in there
+// is no GitHub connect check, so a StartProviderAuth call fails the test.
 func expectRepoSession(tm *tcMocks, id string) {
 	tm.hostedAgents.EXPECT().CreateSessionFromManifest(gomock.Any(), gomock.Any()).Return(repoTestSession(id), nil)
 	ready := repoTestSession(id)
 	ready.Status = godo.HostedAgentSessionStatusReady
 	tm.hostedAgents.EXPECT().GetSession(id).Return(ready, nil)
-	tm.hostedAgents.EXPECT().
-		StartProviderAuth("github").
-		Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
 }
 
 func repoTestSetup(t *testing.T) {
@@ -203,12 +201,16 @@ func TestRunAgentsCreate_JSONRepoWaitsAndClones(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		expectRepoSession(tm, "sess_clone_5")
+		tm.hostedAgents.EXPECT().
+			StartProviderAuth("github").
+			Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
 		expectRepoClone(tm, "sess_clone_5", "owner", "repo", 1, "")
 
 		var buf bytes.Buffer
 		config.Out = &buf
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
 		config.Doit.Set(config.NS, doctl.ArgAgentRepo, "owner/repo")
+		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{"GITHUB_TOKEN=oauth/github"})
 
 		var stderr bytes.Buffer
 		prevErr := execStderr
@@ -459,14 +461,15 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
 // The token reaches the session only when the user asks for it with --secret;
-// connecting GitHub alone never puts it in the create body.
+// connecting GitHub alone never puts it in the create body. The connection is
+// checked only for the opt-in, so a public-repo create makes no auth request.
 func TestGitHubTokenIsOptIn(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		secrets []string
 		want    bool
 	}{
-		{"connected, no opt-in", nil, false},
+		{"no opt-in", nil, false},
 		{"opt-in", []string{"GITHUB_TOKEN=oauth/github"}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -477,8 +480,10 @@ func TestGitHubTokenIsOptIn(t *testing.T) {
 						assert.Equal(t, tc.want, strings.Contains(string(m), "GITHUB_TOKEN: oauth/github"), string(m))
 						return repoTestSession("s"), nil
 					})
-				tm.hostedAgents.EXPECT().StartProviderAuth("github").
-					Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+				if tc.want {
+					tm.hostedAgents.EXPECT().StartProviderAuth("github").
+						Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "success"}, nil)
+				}
 				config.Out = &bytes.Buffer{}
 				config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
 				config.Doit.Set(config.NS, doctl.ArgAgentRepo, "o/r")
@@ -490,6 +495,28 @@ func TestGitHubTokenIsOptIn(t *testing.T) {
 			})
 		})
 	}
+}
+
+// Asking for the token on a team without GitHub connected fails before a
+// session exists, rather than after a clone that could never authenticate.
+func TestGitHubTokenOptInWithoutConnectionCreatesNoSession(t *testing.T) {
+	repoTestSetup(t)
+	prevAsk := askConnectGitHub
+	t.Cleanup(func() { askConnectGitHub = prevAsk })
+	askConnectGitHub = func() (bool, error) { return false, nil }
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().StartProviderAuth("github").
+			Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "pending", PollURL: "https://example.com/poll"}, nil)
+		config.Out = &bytes.Buffer{}
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+		config.Doit.Set(config.NS, doctl.ArgAgentRepo, "o/r")
+		config.Doit.Set(config.NS, doctl.ArgAgentSecret, []string{"GITHUB_TOKEN=oauth/github"})
+		src, err := resolveAgentCreationSource(config)
+		require.NoError(t, err)
+		_, err = createAgentSession(config, src, nil) // no CreateSession expectation: a create fails the test
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "needs GitHub connected")
+	})
 }
 
 func TestLastRepoErrorLinesIsRuneSafe(t *testing.T) {
@@ -686,10 +713,10 @@ func TestDryRunWithRepoSaysWhatItWouldDo(t *testing.T) {
 }
 
 func TestOriginIsRepo(t *testing.T) {
-	for _, o := range []string{"https://github.com/o/r.git\n", "https://github.com/O/R", "git@github.com:o/r.git", "ssh://git@github.com/o/r", "https://github.com/o/r/"} {
+	for _, o := range []string{"https://github.com/o/r.git\n", "https://github.com/O/R", "git@github.com:o/r.git", "ssh://git@github.com/o/r", "https://github.com/o/r/", "https://x-access-token:" + fakeGitHubToken("s") + "@github.com/o/r.git"} {
 		assert.True(t, originIsRepo(o, "o/r"), o)
 	}
-	for _, o := range []string{"https://github.com/bob/r.git", "https://github.com/o/r2.git", "https://gitlab.com/o/r.git", "https://github.com/x/o/r", ""} {
+	for _, o := range []string{"https://github.com/bob/r.git", "https://github.com/o/r2.git", "https://gitlab.com/o/r.git", "https://github.com/x/o/r", "https://u@evil.example/github.com/o/r", "https://github.com/o/r@x", ""} {
 		assert.False(t, originIsRepo(o, "o/r"), o)
 	}
 }

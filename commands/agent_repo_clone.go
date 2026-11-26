@@ -377,9 +377,15 @@ func manifestDeclaresName(manifest []byte, name string) bool {
 }
 
 // originIsRepo reports whether a git origin URL, in HTTPS or SSH form, names
-// the GitHub repository ref. GitHub names are case-insensitive.
+// the GitHub repository ref. GitHub names are case-insensitive, and HTTPS
+// credentials (https://x-access-token:…@github.com/…) are ignored.
 func originIsRepo(origin, ref string) bool {
 	o := strings.ToLower(strings.TrimSuffix(strings.TrimSuffix(strings.TrimSpace(origin), "/"), ".git"))
+	if rest, ok := strings.CutPrefix(o, "https://"); ok {
+		if at := strings.Index(rest, "@"); at >= 0 && at < strings.IndexByte(rest+"/", '/') {
+			o = "https://" + rest[at+1:]
+		}
+	}
 	ref = strings.ToLower(ref)
 	return o == "https://github.com/"+ref || o == "git@github.com:"+ref || o == "ssh://git@github.com/"+ref
 }

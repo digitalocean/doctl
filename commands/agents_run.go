@@ -37,7 +37,7 @@ import (
 const agentGitHubProvider = "github"
 
 // askConnectGitHub asks whether to start the GitHub OAuth connect flow when
-// --gh-repo is set and the team is not connected. Tests replace this.
+// the GitHub token was asked for and the team is not connected. Tests replace this.
 var askConnectGitHub = defaultAskConnectGitHub
 
 func defaultAskConnectGitHub() (bool, error) {
@@ -46,8 +46,8 @@ func defaultAskConnectGitHub() (bool, error) {
 	}
 	choice, err := confirm.New(
 		// Keep this short: confirm prompts Truncate/WordWrap on one line with
-		// "yes/no", so a long parenthetical was clipped to "(optional " (MARSOHS-1396).
-		"GitHub is not connected. Connect now? (optional — press N to skip)",
+		// "yes/no" (MARSOHS-1396).
+		"GitHub is not connected. Connect now?",
 		confirm.WithDefaultChoice(confirm.No),
 	).Prompt()
 	if err != nil {
@@ -56,13 +56,15 @@ func defaultAskConnectGitHub() (bool, error) {
 	return choice == confirm.Yes, nil
 }
 
-// maybeOfferGitHubAuth checks team GitHub connect status when --gh-repo is used.
-// Already connected → continue. Otherwise optionally run `agent auth github`.
-// Declining (or non-interactive) continues; public repos do not require auth.
+// ensureGitHubConnected runs before a --gh-repo create that asked for the
+// GitHub token (--secret GITHUB_TOKEN=oauth/github), which resolves only on a
+// team with GitHub connected. Already connected → continue. Otherwise offer
+// `auth github` on a terminal; declining, or having no terminal, fails before
+// a session is created instead of after a failed clone.
 //
 // Structured output never prompts, and its status lines go to stderr so stdout
 // stays one JSON document.
-func maybeOfferGitHubAuth(c *CmdConfig) error {
+func ensureGitHubConnected(c *CmdConfig) error {
 	structured := agentStructuredOutput(c)
 	var out io.Writer = c.Out
 	if structured {
@@ -72,7 +74,7 @@ func maybeOfferGitHubAuth(c *CmdConfig) error {
 	svc := c.HostedAgents()
 	start, err := svc.StartProviderAuth(agentGitHubProvider)
 	if err != nil {
-		warn("could not check GitHub connection status: %v (continuing; use `doctl harness-runtime auth github` for private repos)", err)
+		warn("could not check GitHub connection status: %v (continuing; "+githubTokenOptIn+" needs `doctl harness-runtime auth github`)", err)
 		return nil
 	}
 	if start != nil && strings.EqualFold(start.Status, agentProviderAuthStatusSuccess) {
@@ -87,10 +89,7 @@ func maybeOfferGitHubAuth(c *CmdConfig) error {
 		}
 	}
 	if !connect {
-		fmt.Fprintf(out, "%s %s\n",
-			colorize("•", colMuted),
-			colorize("Skipping GitHub connect — fine for public repos. Private repos need the connection (`doctl harness-runtime auth github`) and "+githubTokenOptIn+".", colMuted))
-		return nil
+		return fmt.Errorf("%s needs GitHub connected: run `doctl harness-runtime auth github`, then run the command again (a public repository needs neither)", githubTokenOptIn)
 	}
 
 	return completeProviderAuth(c, svc, agentGitHubProvider, start, false, false)

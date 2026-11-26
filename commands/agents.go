@@ -1270,8 +1270,10 @@ func agentSourcesExclusiveErr() error {
 func createAgentSession(c *CmdConfig, src *agentCreationSource, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if src.repo != "" {
 		warnPromptBeforeClone(src)
-		if err := maybeOfferGitHubAuth(c); err != nil {
-			return nil, err
+		if manifestSecretValues(src.manifest)[githubTokenSecret] == githubOAuthRef {
+			if err := ensureGitHubConnected(c); err != nil {
+				return nil, err
+			}
 		}
 	}
 	sess, err := createAgentSessionIn(c, src, prog)
