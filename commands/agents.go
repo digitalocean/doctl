@@ -8031,15 +8031,24 @@ func attachDownloadFromArgs(c *CmdConfig, svc do.HostedAgentsService, sessionID 
 	if len(positional) == 2 {
 		localFile = positional[1]
 	} else {
-		// Workspace paths are POSIX (remote Linux sandbox) regardless of the
-		// host OS running doctl, so use path.Base rather than filepath.Base.
-		base := path.Base(strings.TrimSuffix(workspacePath, "/"))
-		if base == "" || base == "." || base == "/" {
-			return fmt.Errorf("usage: /download <workspace-path> <local-file> [--archive]  (couldn't infer a local filename from %q)", workspacePath)
+		name, err := inferLocalNameFromWorkspacePath(workspacePath)
+		if err != nil {
+			return fmt.Errorf("usage: /download <workspace-path> <local-file> [--archive]  (%v)", err)
 		}
-		localFile = base
+		localFile = name
 	}
 	return runWorkspaceDownload(c, svc, sessionID, workspacePath, localFile, archive)
+}
+
+// inferLocalNameFromWorkspacePath derives the `/download` default local name,
+// rejecting anything that is not a single host-local filename.
+func inferLocalNameFromWorkspacePath(workspacePath string) (string, error) {
+	base := path.Base(strings.TrimSuffix(workspacePath, "/"))
+	if base == "" || base == "." || base == ".." || base == "/" ||
+		!filepath.IsLocal(base) || filepath.Base(base) != base {
+		return "", fmt.Errorf("couldn't infer a safe local filename from %q", workspacePath)
+	}
+	return base, nil
 }
 
 // listPendingHITLs renders the current HITL queue. The head is marked with
