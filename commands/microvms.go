@@ -51,7 +51,7 @@ func MicroVM() *Command {
 
 	cmdMicroVMList := CmdBuilder(cmd, RunMicroVMList, "list",
 		"List MicroVMs on your account",
-		"Retrieves a list of MicroVMs on your account. Filters combine with logical AND: `--region`, `--name`, and `--tag-name`.",
+		"Retrieves a list of MicroVMs on your account. Filters combine with logical AND: `--region`, `--name`, `--tag-name`, `--fork-id`, and `--forked-from`.",
 		Writer, aliasOpt("ls"), displayerType(&displayers.MicroVM{}))
 	AddStringFlag(cmdMicroVMList, doctl.ArgRegionSlug, "", "",
 		"Filter MicroVMs by region slug, such as `nyc1`")
@@ -59,6 +59,10 @@ func MicroVM() *Command {
 		"Filter MicroVMs by exact name")
 	AddStringFlag(cmdMicroVMList, doctl.ArgTagName, "", "",
 		"Filter MicroVMs by resource tag name. A tag that matches nothing returns an empty list")
+	AddStringFlag(cmdMicroVMList, "fork-id", "", "",
+		"Filter to the copies one fork created, by the fork ID the fork command reported")
+	AddStringFlag(cmdMicroVMList, "forked-from", "", "",
+		"Filter to the MicroVMs forked from this MicroVM ID, across all of its forks")
 
 	CmdBuilder(cmd, RunMicroVMGet, "get <microvm-id>",
 		"Retrieve information about a MicroVM",
@@ -123,6 +127,26 @@ func MicroVM() *Command {
 		"Remove every tag from the MicroVM (mutually exclusive with `--tag`)")
 	AddStringFlag(cmdMicroVMUpdate, "auto-pause-idle-timeout", "", "",
 		"Idle duration before auto-pause (e.g. `5m`, `30s`)")
+
+	cmdMicroVMFork := CmdBuilder(cmd, RunMicroVMFork, "fork <microvm-id>",
+		"Fork a MicroVM into one or more copies",
+		"Creates copies of a running or paused MicroVM from its current memory and disk state. "+
+			"Each copy takes the source's size, region, networking, configuration, and tags. "+
+			"A running source keeps running and a paused source stays paused.\n\n"+
+			"The fork captures a checkpoint first and keeps it afterwards; each copy shows it as its source. "+
+			"Without `--wait` the copies are returned in `creating`; list them later with `--fork-id` on `doctl compute microvm list`. "+
+			"Copies settle independently, so some can fail while others run.\n\n"+
+			"Forking is not idempotent: running the command again forks again, so doctl does not retry it. "+
+			"If the command fails without a clear answer, check `doctl compute microvm list --forked-from <microvm-id>` before running it again.",
+		Writer, displayerType(&displayers.MicroVM{}))
+	AddIntFlag(cmdMicroVMFork, "count", "", 1,
+		"The number of copies to create. The platform sets the maximum")
+	AddStringFlag(cmdMicroVMFork, "name", "", "",
+		"The base name of the copies. One copy takes the name as given; several take <name>-1 to <name>-N. Generated from the source's name when omitted")
+	AddStringSliceFlag(cmdMicroVMFork, doctl.ArgTag, "", []string{},
+		"Tags to add to every copy, on top of the source's tags. Repeatable.")
+	AddWaitFlags(cmdMicroVMFork, false,
+		"Wait until every copy is running or has failed before returning")
 
 	CmdBuilder(cmd, RunMicroVMPause, "pause <microvm-id>",
 		"Pause a running MicroVM",
@@ -338,11 +362,21 @@ func RunMicroVMList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	forkID, err := c.Doit.GetString(c.NS, "fork-id")
+	if err != nil {
+		return err
+	}
+	forkedFrom, err := c.Doit.GetString(c.NS, "forked-from")
+	if err != nil {
+		return err
+	}
 
 	list, err := c.MicroVMs().List(do.MicroVMListFilter{
-		Region:  region,
-		Name:    name,
-		TagName: tagName,
+		Region:     region,
+		Name:       name,
+		TagName:    tagName,
+		ForkID:     forkID,
+		ForkedFrom: forkedFrom,
 	})
 	if err != nil {
 		return err
@@ -580,6 +614,149 @@ func RunMicroVMUpdate(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(&displayers.MicroVM{MicroVMs: do.MicroVMs{*md}})
+}
+
+// RunMicroVMFork forks a MicroVM into copies and, with --wait, waits for every
+// copy to settle.
+func RunMicroVMFork(c *CmdConfig) error {
+	if err := ensureOneArg(c); err != nil {
+		return err
+	}
+	count, err := c.Doit.GetInt(c.NS, "count")
+	if err != nil {
+		return err
+	}
+	name, err := c.Doit.GetString(c.NS, "name")
+	if err != nil {
+		return err
+	}
+	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
+	if err != nil {
+		return err
+	}
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+	if count < 1 {
+		return fmt.Errorf("--count must be at least 1")
+	}
+
+	// Only the fork goes through the client without retries; the polls below
+	// are plain reads and keep the shared one.
+	forker, err := microVMsWithoutRetries(c)
+	if err != nil {
+		return err
+	}
+	fork, err := forker.Fork(c.Args[0], &godo.MicroVMForkRequest{Count: count, Name: name, Tags: tags})
+	if err != nil {
+		return forkOutcomeUnknown(err, c.Args[0])
+	}
+	copies := fork.MicroVMs
+	if !wait {
+		notice("Fork %s accepted%s; the copies are creating", fork.ForkID, fromCheckpoint(fork.CheckpointID))
+		return c.Display(&displayers.MicroVM{MicroVMs: copies})
+	}
+
+	w, err := newWaiter(c)
+	if err != nil {
+		return err
+	}
+	if err := waitForMicroVMCopies(w, c.MicroVMs(), copies); err != nil {
+		return err
+	}
+	if err := c.Display(&displayers.MicroVM{MicroVMs: copies}); err != nil {
+		return err
+	}
+	if failed := countMicroVMsInState(copies, godo.MicroVMStateFailed); failed > 0 {
+		return fmt.Errorf("%d of %d copies failed; see the Failure Reason column", failed, len(copies))
+	}
+	notice("Fork %s made %d copies%s", fork.ForkID, len(copies), fromCheckpoint(fork.CheckpointID))
+	return nil
+}
+
+func fromCheckpoint(id string) string {
+	if id == "" {
+		return ""
+	}
+	return " from checkpoint " + id
+}
+
+// microVMsWithoutRetries returns a MicroVMs service that sends each request
+// once. doctl retries 429s and 5xx up to --http-retry-max, and a retried fork
+// whose first attempt was accepted would fork twice. Same pattern as
+// disableRetriesForExec.
+func microVMsWithoutRetries(c *CmdConfig) (do.MicroVMsService, error) {
+	if RetryMax <= 0 {
+		return c.MicroVMs(), nil
+	}
+	godoClient, err := c.Doit.GetGodoClient(Trace, false, c.getContextAccessToken())
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize DigitalOcean API client: %s", err)
+	}
+	return do.NewMicroVMsService(godoClient), nil
+}
+
+// forkOutcomeUnknown marks a fork error that does not say whether the fork
+// was accepted: anything but a 4xx answer. The default next step for a 5xx
+// is to run the command again, which could fork twice.
+func forkOutcomeUnknown(err error, id string) error {
+	var errResp *godo.ErrorResponse
+	if errors.As(err, &errResp) && errResp.Response != nil && errResp.Response.StatusCode < http.StatusInternalServerError {
+		return err
+	}
+	return forkOutcomeUnknownError{err: err, id: id}
+}
+
+type forkOutcomeUnknownError struct {
+	err error
+	id  string
+}
+
+func (e forkOutcomeUnknownError) Error() string { return e.err.Error() }
+func (e forkOutcomeUnknownError) Unwrap() error { return e.err }
+func (e forkOutcomeUnknownError) NextStep() string {
+	return fmt.Sprintf("the fork may still have been accepted; run doctl compute microvm list --forked-from %s before forking again", e.id)
+}
+
+// waitForMicroVMCopies polls every copy still creating until none is. It
+// updates copies in place. A copy that no longer exists was deleted and is
+// reported terminated.
+func waitForMicroVMCopies(w waiter, svc do.MicroVMsService, copies do.MicroVMs) error {
+	op := waitOp{
+		Activity: fmt.Sprintf("Forking into %d copies", len(copies)),
+		Subject:  "the fork's copies to start",
+		Success:  "Every copy has settled",
+	}
+	return w.wait(op, func() (bool, string, error) {
+		for i := range copies {
+			if copies[i].State != godo.MicroVMStateCreating {
+				continue
+			}
+			md, err := svc.Get(copies[i].ID)
+			var errResp *godo.ErrorResponse
+			switch {
+			case errors.As(err, &errResp) && errResp.Response != nil && errResp.Response.StatusCode == http.StatusNotFound:
+				copies[i].State = godo.MicroVMStateTerminated
+			case err != nil:
+				return false, "", err
+			default:
+				copies[i] = *md
+			}
+		}
+		creating := countMicroVMsInState(copies, godo.MicroVMStateCreating)
+		return creating == 0, fmt.Sprintf("%d of %d still creating", creating, len(copies)), nil
+	})
+}
+
+func countMicroVMsInState(mvs do.MicroVMs, state godo.MicroVMState) int {
+	n := 0
+	for _, mv := range mvs {
+		if mv.State == state {
+			n++
+		}
+	}
+	return n
 }
 
 // RunMicroVMPause transitions a MicroVM to the paused state.

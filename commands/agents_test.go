@@ -275,6 +275,7 @@ func TestCreateNeverAttaches(t *testing.T) {
 	stubInteractiveTerminal(t, true)
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		expectValidatePolicy(t, tm, "ask")
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			Return(&do.HostedAgentSession{
@@ -322,6 +323,7 @@ func TestRunAgentsCreate_JSONHonoursPrompt(t *testing.T) {
 	t.Cleanup(func() { Output = prev })
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		expectValidatePolicy(t, tm, "ask")
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			Return(&do.HostedAgentSession{
@@ -352,6 +354,7 @@ func TestRunAgentsCreate_JSONHonoursPrompt(t *testing.T) {
 		config.Out = &buf
 		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
 		config.Doit.Set(config.NS, doctl.ArgAgentTriggerPrompt, "classify this")
+		config.Doit.Set(config.NS, doctl.ArgAgentPermission, "ask")
 
 		require.NoError(t, RunAgentsCreate(config))
 		assert.NotContains(t, buf.String(), "Agent is ready", "json stdout must stay parseable")
@@ -365,6 +368,7 @@ func TestRunAgentsCreate_JSONWithoutPromptSkipsWait(t *testing.T) {
 	t.Cleanup(func() { Output = prev })
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		expectValidatePolicy(t, tm, "ask")
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 			Return(&do.HostedAgentSession{
@@ -617,6 +621,7 @@ func TestRunAgentsCreate_FromHarness(t *testing.T) {
 	t.Setenv(anthropicAPIKeyEnv, "sk-ant-test")
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		expectValidatePolicy(t, tm, "ask")
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, opt *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
@@ -6025,6 +6030,42 @@ func TestBackendPhaseFromStatus(t *testing.T) {
 func TestSessionUpdatedPhase(t *testing.T) {
 	assert.Equal(t, "provisioning sandbox", sessionUpdatedPhase([]byte(`{"status":"SESSION_STATUS_PROVISIONING"}`)))
 	assert.Equal(t, "cloning repo", sessionUpdatedPhase([]byte(`{"message":"cloning repo"}`)))
+}
+
+// Machine output keeps stdout parseable: the permission line is stderr-only.
+func TestRunAgentsCreate_JSONKeepsPermissionLineOffStdout(t *testing.T) {
+	prev := Output
+	Output = "json"
+	t.Cleanup(func() { Output = prev })
+
+	var uiOut, stderr bytes.Buffer
+	withUIEnv(t, ui.Plain(&uiOut, &stderr))
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.hostedAgents.EXPECT().
+			ValidatePolicy(gomock.Any(), gomock.Any()).
+			Return(&godo.HostedAgentPolicyValidationResult{DefaultAction: godo.HostedAgentPolicyActionAsk}, nil)
+		tm.hostedAgents.EXPECT().
+			CreateSessionFromManifest(gomock.Any(), gomock.Any()).
+			Return(&do.HostedAgentSession{
+				HostedAgentSession: &godo.HostedAgentSession{
+					SessionID: "sess_json_perm",
+					Name:      "demo",
+					Status:    godo.HostedAgentSessionStatusProvisioning,
+				},
+			}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgAgentHarness, "opencode")
+
+		require.NoError(t, RunAgentsCreate(config))
+		var parsed any
+		require.NoError(t, json.Unmarshal(buf.Bytes(), &parsed), "stdout must be valid JSON")
+		assert.NotContains(t, buf.String(), "permissions.default")
+		assert.Contains(t, stderr.String(), "permissions.default: ask (server will apply)")
+		assert.Empty(t, uiOut.String(), "the line must not reach stdout")
+	})
 }
 
 // logsFrame is an SSE frame with the full event envelope, for the `logs` tests.
