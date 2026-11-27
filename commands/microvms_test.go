@@ -15,8 +15,10 @@ package commands
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -73,7 +75,7 @@ func TestMicroVMCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assert.False(t, cmd.Hidden)
 	assertCommandNames(t, cmd,
-		"access-token", "checkpoint", "console", "create", "delete", "download", "exec", "get", "list", "options", "pause", "port-forward", "resume", "update", "upload", "url",
+		"access-token", "checkpoint", "console", "create", "delete", "download", "exec", "fork", "get", "list", "options", "pause", "port-forward", "resume", "update", "upload", "url",
 	)
 }
 
@@ -119,6 +121,15 @@ func TestMicroVMsListByNameAndTag(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgTagName, "prod")
 		err := RunMicroVMList(config)
 		require.NoError(t, err)
+	})
+}
+
+func TestMicroVMsListByFork(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.microVMs.EXPECT().List(do.MicroVMListFilter{ForkID: testMicroVMForkID, ForkedFrom: testMicroVMID}).Return(testMicroVMList, nil)
+		config.Doit.Set(config.NS, "fork-id", testMicroVMForkID)
+		config.Doit.Set(config.NS, "forked-from", testMicroVMID)
+		require.NoError(t, RunMicroVMList(config))
 	})
 }
 
@@ -539,6 +550,151 @@ func TestMicroVMUpdate(t *testing.T) {
 			})
 		})
 	}
+}
+
+const testMicroVMForkID = "8f7a9a3f-5555-4444-9999-0000000000f0"
+
+func forkCopy(id string, state godo.MicroVMState) do.MicroVM {
+	return do.MicroVM{MicroVM: &godo.MicroVM{
+		ID:         id,
+		Name:       "sammy-fork-" + id,
+		State:      state,
+		Source:     &godo.MicroVMSource{CheckpointID: testMicroVMCheckpoint.ID},
+		ForkID:     testMicroVMForkID,
+		ForkedFrom: testMicroVMID,
+	}}
+}
+
+// keepMicroVMMock holds RetryMax at zero so a fork runs against the mock;
+// with retries on, the runner swaps in a live client that does not retry.
+func keepMicroVMMock(t *testing.T) {
+	t.Helper()
+	prev := RetryMax
+	RetryMax = 0
+	t.Cleanup(func() { RetryMax = prev })
+}
+
+func TestMicroVMFork(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		keepMicroVMMock(t)
+		tm.microVMs.EXPECT().
+			Fork(testMicroVMID, &godo.MicroVMForkRequest{Count: 2, Name: "eval", Tags: []string{"run-42"}}).
+			Return(&do.MicroVMFork{
+				MicroVMs:     do.MicroVMs{forkCopy("1", godo.MicroVMStateCreating), forkCopy("2", godo.MicroVMStateCreating)},
+				ForkID:       testMicroVMForkID,
+				CheckpointID: testMicroVMCheckpoint.ID,
+			}, nil)
+
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, "count", 2)
+		config.Doit.Set(config.NS, "name", "eval")
+		config.Doit.Set(config.NS, doctl.ArgTag, []string{"run-42"})
+		require.NoError(t, RunMicroVMFork(config))
+	})
+}
+
+// A retried fork whose first attempt was accepted would fork twice, so the
+// call goes through a client with retries off whenever the shared one has
+// them on.
+func TestMicroVMForkDoesNotRetry(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		prev := RetryMax
+		t.Cleanup(func() { RetryMax = prev })
+
+		RetryMax = 0
+		svc, err := microVMsWithoutRetries(config)
+		require.NoError(t, err)
+		assert.Same(t, config.MicroVMs(), svc, "with retries already off there is nothing to swap")
+
+		RetryMax = 5
+		svc, err = microVMsWithoutRetries(config)
+		require.NoError(t, err)
+		assert.NotSame(t, config.MicroVMs(), svc, "fork must not run against the retrying client")
+	})
+}
+
+// Only an answer that leaves the outcome open points at the --forked-from
+// check: a 4xx says the fork was refused.
+func TestMicroVMFork_unknownOutcomeSaysHowToCheck(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		wantHint bool
+	}{
+		{name: "server error", err: godoStatusErr(http.StatusBadGateway, "bad gateway"), wantHint: true},
+		{name: "transport error", err: io.ErrUnexpectedEOF, wantHint: true},
+		{name: "refused", err: godoStatusErr(http.StatusBadRequest, "count must be at most 10")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				keepMicroVMMock(t)
+				tm.microVMs.EXPECT().Fork(testMicroVMID, gomock.Any()).Return(nil, tt.err)
+
+				config.Args = append(config.Args, testMicroVMID)
+				config.Doit.Set(config.NS, "count", 1)
+				err := RunMicroVMFork(config)
+				require.ErrorIs(t, err, tt.err)
+				var ns NextStepper
+				if !tt.wantHint {
+					assert.False(t, errors.As(err, &ns), "a refused fork keeps the default next step")
+					return
+				}
+				require.ErrorAs(t, err, &ns)
+				assert.Contains(t, ns.NextStep(), "--forked-from "+testMicroVMID)
+			})
+		})
+	}
+}
+
+func TestMicroVMFork_waitReportsFailedCopies(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		keepMicroVMMock(t)
+		tm.microVMs.EXPECT().Fork(testMicroVMID, &godo.MicroVMForkRequest{Count: 2}).Return(&do.MicroVMFork{
+			MicroVMs:     do.MicroVMs{forkCopy("1", godo.MicroVMStateCreating), forkCopy("2", godo.MicroVMStateCreating)},
+			ForkID:       testMicroVMForkID,
+			CheckpointID: testMicroVMCheckpoint.ID,
+		}, nil)
+		running, failed := forkCopy("1", godo.MicroVMStateRunning), forkCopy("2", godo.MicroVMStateFailed)
+		tm.microVMs.EXPECT().Get("1").Return(&running, nil)
+		tm.microVMs.EXPECT().Get("2").Return(&failed, nil)
+
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, "count", 2)
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
+		err := RunMicroVMFork(config)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "1 of 2 copies failed")
+	})
+}
+
+func TestMicroVMFork_badCount(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testMicroVMID)
+		config.Doit.Set(config.NS, "count", 0)
+		require.Error(t, RunMicroVMFork(config))
+	})
+}
+
+func TestWaitForMicroVMCopies(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		copies := do.MicroVMs{
+			forkCopy("1", godo.MicroVMStateCreating),
+			forkCopy("2", godo.MicroVMStateCreating),
+			forkCopy("3", godo.MicroVMStateFailed),
+		}
+		creating, running := forkCopy("1", godo.MicroVMStateCreating), forkCopy("1", godo.MicroVMStateRunning)
+		gomock.InOrder(
+			tm.microVMs.EXPECT().Get("1").Return(&creating, nil),
+			tm.microVMs.EXPECT().Get("1").Return(&running, nil),
+		)
+		tm.microVMs.EXPECT().Get("2").Return(nil, godoStatusErr(http.StatusNotFound, "not found"))
+
+		require.NoError(t, waitForMicroVMCopies(newTestWaiter(), tm.microVMs, copies))
+		assert.Equal(t, godo.MicroVMStateRunning, copies[0].State)
+		assert.Equal(t, godo.MicroVMStateTerminated, copies[1].State)
+		assert.Equal(t, godo.MicroVMStateFailed, copies[2].State)
+	})
 }
 
 func TestMicroVMUpdate_invalidFlags(t *testing.T) {
