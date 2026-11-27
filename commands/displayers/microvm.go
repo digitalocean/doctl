@@ -54,6 +54,8 @@ func (m *MicroVM) ColMap() map[string]string {
 		"FailureReason": "Failure Reason",
 		"Created":       "Created At",
 		"Egress":        "Egress",
+		"ForkID":        "Fork ID",
+		"ForkedFrom":    "Forked From",
 	}
 }
 
@@ -75,6 +77,8 @@ func (m *MicroVM) KV() []map[string]any {
 			"FailureReason": md.FailureReason,
 			"Created":       md.Created,
 			"Egress":        formatMicroVMEgress(md.EgressPolicy),
+			"ForkID":        md.ForkID,
+			"ForkedFrom":    md.ForkedFrom,
 		})
 	}
 	return out
