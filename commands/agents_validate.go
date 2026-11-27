@@ -133,6 +133,18 @@ const (
 type agentManifestValidation struct {
 	Errors   []string
 	Warnings []string
+	// NearMisses is the subset of Errors raised by the unknown-field near-miss
+	// rule. --allow-unknown-fields moves exactly these to Warnings.
+	NearMisses []string
+	// Credentials is the subset of Warnings about a credential in env. Agent
+	// Config create moves exactly these to Errors.
+	Credentials []string
+}
+
+// warnCredential records a warning that Agent Config create promotes to an error.
+func (v *agentManifestValidation) warnCredential(msg string) {
+	v.Warnings = append(v.Warnings, msg)
+	v.Credentials = append(v.Credentials, msg)
 }
 
 func (v *agentManifestValidation) ok() bool {
@@ -152,6 +164,17 @@ func (v *agentManifestValidation) error() error {
 // keys, MODEL vs HARNESS_INFERENCE_MODEL). Server-side agentspec remains
 // authoritative for the full contract.
 func validateAgentManifest(manifest []byte) *agentManifestValidation {
+	return validateAgentManifestOpts(manifest, true)
+}
+
+// validateAgentManifestSkippingUnknownKeys is validateAgentManifest without the
+// unknown-field pass. Real create runs that pass earlier (before any side
+// effect), so running it again here would report every key twice.
+func validateAgentManifestSkippingUnknownKeys(manifest []byte) *agentManifestValidation {
+	return validateAgentManifestOpts(manifest, false)
+}
+
+func validateAgentManifestOpts(manifest []byte, checkUnknownKeys bool) *agentManifestValidation {
 	out := &agentManifestValidation{}
 	if len(bytesTrimSpace(manifest)) == 0 {
 		out.Errors = append(out.Errors, "manifest is empty")
@@ -172,7 +195,7 @@ func validateAgentManifest(manifest []byte) *agentManifestValidation {
 	if legacy {
 		validateEnvelopeManifest(doc, out)
 	} else {
-		validateFlatManifest(doc, out)
+		validateFlatManifest(doc, out, checkUnknownKeys)
 	}
 
 	validateManifestKeysWhitespace(doc, legacy, out)
@@ -225,7 +248,7 @@ func hasYAMLKey(doc map[string]any, key string) bool {
 	return ok
 }
 
-func validateFlatManifest(doc map[string]any, out *agentManifestValidation) {
+func validateFlatManifest(doc map[string]any, out *agentManifestValidation, checkUnknownKeys bool) {
 	adapter, key, both := flatManifestAdapter(doc)
 	switch {
 	case both:
@@ -240,6 +263,13 @@ func validateFlatManifest(doc map[string]any, out *agentManifestValidation) {
 		if err := validateHostedAgentIdentifier(strings.TrimSpace(name)); err != nil {
 			out.Errors = append(out.Errors, fmt.Sprintf("name: %v", err))
 		}
+	}
+
+	if checkUnknownKeys {
+		errs, warns := unknownManifestKeys(doc)
+		out.Errors = append(out.Errors, errs...)
+		out.NearMisses = append(out.NearMisses, errs...)
+		out.Warnings = append(out.Warnings, warns...)
 	}
 }
 
@@ -376,11 +406,11 @@ func validateManifestEnvAndSecrets(adapter string, env map[string]string, secret
 		}
 		switch {
 		case hasStringKey(slots, key):
-			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.%s: matches a declared %s slot; supply the value through secrets, not %s", envPath, key, secretsPath, envPath))
+			out.warnCredential(fmt.Sprintf("%s.%s: matches a declared %s slot; supply the value through secrets, not %s", envPath, key, secretsPath, envPath))
 		case hasCredentialPrefix(val):
-			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.%s: value looks like a credential; declare it under %s instead", envPath, key, secretsPath))
+			out.warnCredential(fmt.Sprintf("%s.%s: value looks like a credential; declare it under %s instead", envPath, key, secretsPath))
 		case isCredentialLookingEnvKey(key) && !isEnvPlaceholder(val):
-			out.Warnings = append(out.Warnings, fmt.Sprintf("%s.%s: name suggests a credential; declare it under %s instead (guest env is debug-readable and stored as-is)", envPath, key, secretsPath))
+			out.warnCredential(fmt.Sprintf("%s.%s: name suggests a credential; declare it under %s instead (guest env is debug-readable and stored as-is)", envPath, key, secretsPath))
 		}
 	}
 
@@ -1017,6 +1047,95 @@ func hasStringKey(set map[string]struct{}, key string) bool {
 	return ok
 }
 
+// applyStrict turns every warning into an error (--strict).
+func applyStrict(v *agentManifestValidation) *agentManifestValidation {
+	if v == nil {
+		return nil
+	}
+	v.Errors = append(v.Errors, v.Warnings...)
+	v.Warnings = nil
+	return v
+}
+
+// allowUnknownFields moves the unknown-field near-miss errors to warnings
+// (--allow-unknown-fields). Every other error is left alone.
+func allowUnknownFields(v *agentManifestValidation) *agentManifestValidation {
+	if v == nil {
+		return nil
+	}
+	moveFindings(&v.Errors, &v.Warnings, v.NearMisses)
+	v.NearMisses = nil
+	return v
+}
+
+// moveFindings moves the messages in subset from *from to the end of *to,
+// keeping their order. subset holds messages the validator recorded when it
+// raised them, so nothing here depends on their wording.
+func moveFindings(from, to *[]string, subset []string) {
+	if len(subset) == 0 {
+		return
+	}
+	moved := make(map[string]struct{}, len(subset))
+	for _, m := range subset {
+		moved[m] = struct{}{}
+	}
+	kept := (*from)[:0:0]
+	for _, f := range *from {
+		if _, ok := moved[f]; ok {
+			*to = append(*to, f)
+			continue
+		}
+		kept = append(kept, f)
+	}
+	*from = kept
+}
+
+// agentManifestStrictness reads --strict and --allow-unknown-fields. They pull
+// in opposite directions (strict turns every warning into an error, the other
+// turns near-miss errors into warnings), so giving both is an error.
+func agentManifestStrictness(c *CmdConfig) (strict, allowUnknown bool, err error) {
+	strict = agentStrictFlag(c)
+	allowUnknown, _ = c.Doit.GetBool(c.NS, doctl.ArgAgentAllowUnknownFields)
+	if strict && allowUnknown {
+		return false, false, fmt.Errorf("--%s and --%s cannot be used together", doctl.ArgAgentStrict, doctl.ArgAgentAllowUnknownFields)
+	}
+	return strict, allowUnknown, nil
+}
+
+// applyManifestFlags applies --allow-unknown-fields and --strict to v.
+func applyManifestFlags(c *CmdConfig, v *agentManifestValidation) error {
+	strict, allowUnknown, err := agentManifestStrictness(c)
+	if err != nil {
+		return err
+	}
+	if allowUnknown {
+		allowUnknownFields(v)
+	}
+	if strict {
+		applyStrict(v)
+	}
+	return nil
+}
+
+// checkExpandedManifest runs the validator on a ${VAR}-expanded manifest for
+// create, launch and --dry-run, so a dry run fails exactly where the real
+// create would. It skips the unknown-field pass: resolveAgentCreationSource
+// already ran it on the raw manifest.
+func checkExpandedManifest(c *CmdConfig, manifest []byte) error {
+	v := validateAgentManifestSkippingUnknownKeys(manifest)
+	if err := applyManifestFlags(c, v); err != nil {
+		return err
+	}
+	return reportAgentManifestValidation(v)
+}
+
+// agentStrictFlag reports whether --strict was given. Commands that do not
+// register the flag read false.
+func agentStrictFlag(c *CmdConfig) bool {
+	strict, _ := c.Doit.GetBool(c.NS, doctl.ArgAgentStrict)
+	return strict
+}
+
 func reportAgentManifestValidation(v *agentManifestValidation) error {
 	if v == nil {
 		return nil
@@ -1032,15 +1151,8 @@ func reportDurableAgentManifestValidation(v *agentManifestValidation) error {
 	if v == nil {
 		return nil
 	}
-	var kept []string
-	for _, w := range v.Warnings {
-		if strings.Contains(w, "matches a declared") || strings.Contains(w, "looks like a credential") || strings.Contains(w, "name suggests a credential") {
-			v.Errors = append(v.Errors, w)
-			continue
-		}
-		kept = append(kept, w)
-	}
-	v.Warnings = kept
+	moveFindings(&v.Warnings, &v.Errors, v.Credentials)
+	v.Credentials = nil
 	printAgentManifestWarnings(os.Stderr, v.Warnings)
 	return v.error()
 }
@@ -1069,6 +1181,9 @@ func RunAgentsValidate(c *CmdConfig) error {
 		return err
 	}
 	v := validateAgentManifest(raw)
+	if err := applyManifestFlags(c, v); err != nil {
+		return err
+	}
 	printAgentManifestValidation(c.Out, v)
 	if !v.ok() {
 		return ErrExitSilently
@@ -1219,7 +1334,9 @@ func splitValidationPath(msg string) (path, rest string, ok bool) {
 	// "spec.env.MODEL: rest" or "agent "not-a-real-adapter" is not…"
 	if i := strings.Index(msg, ": "); i > 0 {
 		candidate := msg[:i]
-		if looksLikeFieldPath(candidate) {
+		// A top-level unknown key has no dot to recognize it by; its message
+		// names the key again.
+		if looksLikeFieldPath(candidate) || strings.HasPrefix(msg[i+2:], fmt.Sprintf("unknown field %q", candidate)) {
 			return candidate, msg[i+2:], true
 		}
 	}

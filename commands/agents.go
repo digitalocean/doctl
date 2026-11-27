@@ -517,6 +517,8 @@ func Agents() *Command {
 		agentsValidateHelpMD,
 		Writer, agentsNS()...)
 	AddStringFlag(cmdValidate, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON (flat or legacy envelope), equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Set to "-" to read from stdin.`)
+	AddBoolFlag(cmdValidate, doctl.ArgAgentStrict, "", false, agentStrictFlagDesc)
+	AddBoolFlag(cmdValidate, doctl.ArgAgentAllowUnknownFields, "", false, agentAllowUnknownFlagDesc)
 	acceptFileAliasFor(cmdValidate)
 	cmdValidate.Example = agentCLI + ` validate; ` + agentCLI + ` validate agent.yaml`
 
@@ -756,7 +758,15 @@ func addAgentCreationFlags(cmd *Command) {
 	AddIntFlag(cmd, doctl.ArgAgentWaitTimeout, "", 300, "Maximum seconds to wait for the session to become ready (0 uses the default). Ignored with -o json unless --prompt is also set.")
 	AddBoolFlag(cmd, doctl.ArgAgentResumeOnTopoff, "", false, agentResumeOnTopoffFlagDesc)
 	AddStringFlag(cmd, doctl.ArgAgentWorkspace, "", "", agentWorkspaceFlagDesc)
+	AddBoolFlag(cmd, doctl.ArgAgentStrict, "", false, agentStrictFlagDesc)
+	AddBoolFlag(cmd, doctl.ArgAgentAllowUnknownFields, "", false, agentAllowUnknownFlagDesc)
 }
+
+// agentStrictFlagDesc is the one description of --strict for every command that
+// validates a manifest.
+const agentAllowUnknownFlagDesc = "Report unknown manifest fields that look like a misspelling as warnings instead of errors, for a field newer than this doctl. Not valid with --strict or --from-config."
+
+const agentStrictFlagDesc = "Treat manifest warnings (including unknown fields) as errors. Not valid with --from-config."
 
 // defaultHarnessPermission is the tool-permission default written onto a
 // --harness manifest, and the default of --permission. It is ask, which is
@@ -1157,6 +1167,9 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	}
 
 	if configRef != "" {
+		if err := rejectManifestFlagsWithFromConfig(c); err != nil {
+			return nil, err
+		}
 		if name == "" {
 			return nil, fmt.Errorf("--%s is required when creating from --%s", doctl.ArgAgentName, doctl.ArgAgentFromConfig)
 		}
@@ -1217,7 +1230,43 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 				bareSandboxAgent, flag, flag, agentCLI)
 		}
 	}
+
+	// The one place unknown manifest fields are reported for dry-run, create and
+	// launch. It runs on the raw manifest (before ${VAR} expansion) and before
+	// any API call or side effect (GitHub connect, OpenAI environment setup),
+	// and it is the only run: checkExpandedManifest, which runs the rest of the
+	// validator after expansion, skips this pass so nothing is reported twice.
+	strict, allowUnknown, err := agentManifestStrictness(c)
+	if err != nil {
+		return nil, err
+	}
+	earlyWarnings, err := earlyUnknownKeyCheck(raw, strict, allowUnknown)
+	printAgentManifestWarnings(os.Stderr, earlyWarnings)
+	if err != nil {
+		return nil, err
+	}
 	return src, nil
+}
+
+// rejectManifestFlagsWithFromConfig fails when --strict or
+// --allow-unknown-fields is given with --from-config. The config's stored
+// manifest was validated when the config was created, and the user cannot edit
+// it, so neither flag has anything to act on.
+func rejectManifestFlagsWithFromConfig(c *CmdConfig) error {
+	return rejectManifestFlags(c, fmt.Sprintf("cannot be used with --%s; an Agent Config's manifest was validated when the config was created", doctl.ArgAgentFromConfig))
+}
+
+// rejectManifestFlags fails when --strict or --allow-unknown-fields is given
+// where there is no manifest for it to check, so the flag is never silently
+// ignored. An explicit --flag=false asks for nothing and passes. why completes
+// the message after "--<flag> ".
+func rejectManifestFlags(c *CmdConfig, why string) error {
+	for _, flag := range []string{doctl.ArgAgentStrict, doctl.ArgAgentAllowUnknownFields} {
+		if on, _ := c.Doit.GetBool(c.NS, flag); on {
+			return fmt.Errorf("--%s %s", flag, why)
+		}
+	}
+	return nil
 }
 
 // noteIgnoredVendorKey says, once, that a vendor key exported in the shell is
@@ -1553,6 +1602,10 @@ func printResolvedManifest(c *CmdConfig, src *agentCreationSource) error {
 	if src.resumeOnTopoff {
 		notice("--%s is sent as a request parameter, not written into the manifest, so it does not appear below and does not survive being piped elsewhere; pass it again on the command that creates the session",
 			doctl.ArgAgentResumeOnTopoff)
+	}
+
+	if err := checkExpandedManifest(c, manifest); err != nil {
+		return err
 	}
 
 	out := redactManifestSecrets(manifest)

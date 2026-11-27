@@ -1,0 +1,18 @@
+# Keys that only exist with harness: crewai. No unknown-field reports (the
+# validator still warns that crewai is not yet supported for session create).
+name: crewai-example
+harness: crewai
+crewai:
+  framework:
+    repo: https://github.com/example/crew
+    repo_sha: 0123456789abcdef0123456789abcdef01234567
+    subdir: agents/crew
+    object: crew:build
+  inputs:
+    prompt_key: topic
+    defaults:
+      language: en
+    schema:
+      topic:
+        type: string
+        required: true
