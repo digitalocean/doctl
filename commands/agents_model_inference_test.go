@@ -110,6 +110,7 @@ func TestRunAgentsCreate_ModelUsesManagedKey(t *testing.T) {
 				stdout, stderr := captureUIEnv(t)
 
 				withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+					allowValidatePolicy(tm)
 					tm.hostedAgents.EXPECT().
 						CreateSessionFromManifestWithManagedKey(gomock.Any(), nil).
 						DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
@@ -144,6 +145,7 @@ func TestRunAgentsCreate_ModelWithVendorSecretSkipsManagedKey(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "sk-from-shell")
 	_, stderr := captureUIEnv(t)
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		allowValidatePolicy(tm)
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
@@ -171,6 +173,7 @@ func TestRunAgentsCreate_ModelWithOtherVendorSecretKeepsOwnSlot(t *testing.T) {
 			t.Setenv(tc.own, "sk-from-shell")
 			_, stderr := captureUIEnv(t)
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				allowValidatePolicy(tm)
 				tm.hostedAgents.EXPECT().
 					CreateSessionFromManifest(gomock.Any(), nil).
 					DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
@@ -192,6 +195,7 @@ func TestRunAgentsCreate_ModelWithVendorSecretSkipsManagedKeyCodex(t *testing.T)
 	t.Setenv("OPENAI_API_KEY", "sk-from-shell")
 	_, stderr := captureUIEnv(t)
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		allowValidatePolicy(tm)
 		tm.hostedAgents.EXPECT().
 			CreateSessionFromManifest(gomock.Any(), nil).
 			DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
@@ -216,6 +220,7 @@ func TestRunAgentsCreate_ModelWithHarnessKeySecret(t *testing.T) {
 			os.Unsetenv("OPENAI_API_KEY")
 			captureUIEnv(t)
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				allowValidatePolicy(tm)
 				tm.hostedAgents.EXPECT().
 					CreateSessionFromManifest(gomock.Any(), nil).
 					DoAndReturn(func(manifest []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
