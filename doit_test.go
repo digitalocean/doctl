@@ -163,6 +163,32 @@ func TestGetGodoClientBaseURL(t *testing.T) {
 			apiURL: "https://example.test/",
 			want:   "https://example.test/",
 		},
+		// Older doctl versions wrote every flag default into config.yaml, so this
+		// value is usually left over rather than chosen. It must not undo a host
+		// that --region selected (MARSOHS-2805).
+		{
+			name:   "an api-url equal to the default does not replace a caller-supplied base URL",
+			apiURL: "https://api.digitalocean.com/",
+			opts:   []godo.ClientOpt{godo.SetBaseURL(customDefault)},
+			want:   customDefault,
+		},
+		{
+			name:   "the default api-url without a trailing slash is still the default",
+			apiURL: "https://api.digitalocean.com",
+			opts:   []godo.ClientOpt{godo.SetBaseURL(customDefault)},
+			want:   customDefault,
+		},
+		{
+			name:   "the default api-url in other letter case is still the default",
+			apiURL: "HTTPS://API.DigitalOcean.com/",
+			opts:   []godo.ClientOpt{godo.SetBaseURL(customDefault)},
+			want:   customDefault,
+		},
+		{
+			name:   "a default api-url with no caller options leaves godo's default",
+			apiURL: "https://api.digitalocean.com/",
+			want:   "https://api.digitalocean.com/",
+		},
 	}
 
 	for _, c := range cases {
@@ -176,6 +202,33 @@ func TestGetGodoClientBaseURL(t *testing.T) {
 			}
 			if got := client.BaseURL.String(); got != c.want {
 				t.Errorf("BaseURL = %q; want %q", got, c.want)
+			}
+		})
+	}
+}
+
+func TestExplicitAPIURL(t *testing.T) {
+	cases := []struct {
+		name   string
+		apiURL string
+		want   string
+	}{
+		{"unset", "", ""},
+		{"blank", "   ", ""},
+		{"the default", "https://api.digitalocean.com/", ""},
+		{"the default without a trailing slash", "https://api.digitalocean.com", ""},
+		{"the default with surrounding space", " https://api.digitalocean.com/ ", ""},
+		{"another host", "https://api.preview.example.com/", "https://api.preview.example.com/"},
+		{"a regional host", "https://api-mem1.digitalocean.com/", "https://api-mem1.digitalocean.com/"},
+		{"the default host on another scheme", "http://api.digitalocean.com/", "http://api.digitalocean.com/"},
+		{"the default host with a path", "https://api.digitalocean.com/proxy/", "https://api.digitalocean.com/proxy/"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			viper.Set("api-url", c.apiURL)
+			t.Cleanup(func() { viper.Set("api-url", "") })
+			if got := ExplicitAPIURL(); got != c.want {
+				t.Errorf("ExplicitAPIURL() = %q; want %q", got, c.want)
 			}
 		})
 	}

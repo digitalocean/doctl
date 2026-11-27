@@ -133,7 +133,7 @@ func regionAPIURL(region string) string {
 // explicit --api-url / DIGITALOCEAN_API_URL first. For callers that build a URL
 // themselves instead of going through the godo client.
 func agentRegionBaseURL() (string, error) {
-	if raw := viper.GetString("api-url"); raw != "" {
+	if raw := doctl.ExplicitAPIURL(); raw != "" {
 		return raw, nil
 	}
 	region, err := agentRegionFlag()
@@ -150,9 +150,10 @@ func agentRegionBaseURL() (string, error) {
 // requested region's host, and nil when there is nothing to change.
 //
 // GetGodoClient applies these before the --api-url override, so a host the user
-// chose explicitly still wins and doctl only ever rewrites a default. A command
-// outside the harness-runtime group gets nil, config.yaml included — see
-// agentRegionRequested.
+// chose explicitly still wins and doctl only ever rewrites a default. An api-url
+// equal to the default host is not a choice (see doctl.ExplicitAPIURL), so it
+// does not undo the region. A command outside the harness-runtime group gets
+// nil, config.yaml included — see agentRegionRequested.
 func agentRegionClientOpts() ([]godo.ClientOpt, error) {
 	region, err := agentRegionFlag()
 	if err != nil {
@@ -189,7 +190,7 @@ func useSessionLocationHost(c *CmdConfig, sess *do.HostedAgentSession) error {
 	if sess == nil || sess.HostedAgentSession == nil || sess.Location == "" {
 		return nil
 	}
-	if viper.GetString("api-url") != "" {
+	if doctl.ExplicitAPIURL() != "" {
 		return nil
 	}
 	base := locationBaseURL(sess.Location)
