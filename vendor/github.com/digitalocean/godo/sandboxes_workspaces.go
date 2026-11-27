@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 )
 
 const sandboxWorkspacesBasePath = sandboxesBasePath + "/workspaces"
@@ -46,19 +45,7 @@ type SandboxWorkspace struct {
 	AttachedSandboxID string `json:"attached_sandbox_id,omitempty"`
 	// LastSavedAt is the last time the workspace data was saved.
 	LastSavedAt Timestamp `json:"last_saved_at"`
-	// BytesUsed is the bytes used, encoded as a decimal string by the API. It
-	// is "0" or empty when not reported yet. Used parses it.
-	BytesUsed string    `json:"bytes_used,omitempty"`
-	CreatedAt Timestamp `json:"created_at"`
-}
-
-// Used is BytesUsed as a number. It is 0 when it is not set or is not a number.
-func (w SandboxWorkspace) Used() uint64 {
-	n, err := strconv.ParseUint(w.BytesUsed, 10, 64)
-	if err != nil {
-		return 0
-	}
-	return n
+	CreatedAt   Timestamp `json:"created_at"`
 }
 
 // SandboxWorkspaceCreateRequest is the body of CreateWorkspace.

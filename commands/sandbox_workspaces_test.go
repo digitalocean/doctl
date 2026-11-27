@@ -36,7 +36,6 @@ func testSandboxWorkspace(state godo.SandboxWorkspaceState) do.SandboxWorkspace 
 		SizeLimitGiB:      10,
 		State:             state,
 		AttachedSandboxID: testSandboxID,
-		BytesUsed:         "4096",
 		CreatedAt:         godo.Timestamp{Time: time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)},
 	}}
 }
@@ -157,11 +156,10 @@ func TestSandboxWorkspaceDelete(t *testing.T) {
 func TestSandboxWorkspaceDisplayer(t *testing.T) {
 	d := &displayers.SandboxWorkspace{Workspaces: do.SandboxWorkspaces{testSandboxWorkspace(godo.SandboxWorkspaceStateAttached)}}
 
-	assert.Equal(t, []string{"ID", "Name", "State", "SizeLimitGiB", "AttachedSandbox", "BytesUsed", "Created"}, d.Cols())
+	assert.Equal(t, []string{"ID", "Name", "State", "SizeLimitGiB", "AttachedSandbox", "Created"}, d.Cols())
 	kv := d.KV()
 	require.Len(t, kv, 1)
 	assert.Equal(t, "attached", kv[0]["State"])
-	assert.Equal(t, uint64(4096), kv[0]["BytesUsed"])
 	assert.Equal(t, testSandboxID, kv[0]["AttachedSandbox"])
 	assert.Equal(t, "2026-11-20T12:00:00Z", kv[0]["Created"])
 

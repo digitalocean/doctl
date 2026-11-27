@@ -103,7 +103,7 @@ github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/digitalocean/godo v1.244.1-0.20261122151423-0b0d7cf074f5 => github.com/blesswinsamuel/godo v0.0.0-20261126180306-f6d94d56201e
+# github.com/digitalocean/godo v1.244.1-0.20261122151423-0b0d7cf074f5 => github.com/blesswinsamuel/godo v0.0.0-20261127022226-7f81b86af99d
 ## explicit; go 1.23.0
 github.com/digitalocean/godo
 github.com/digitalocean/godo/metrics
@@ -719,4 +719,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# github.com/digitalocean/godo => github.com/blesswinsamuel/godo v0.0.0-20261126180306-f6d94d56201e
+# github.com/digitalocean/godo => github.com/blesswinsamuel/godo v0.0.0-20261127022226-7f81b86af99d

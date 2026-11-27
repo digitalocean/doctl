@@ -68,8 +68,8 @@ github.com/aymerick/douceur v0.2.0 h1:Mv+mAeH1Q+n9Fr+oyamOlAkUNPWPlA8PPGR0QAaYuP
 github.com/aymerick/douceur v0.2.0/go.mod h1:wlT5vV2O3h55X9m7iVYN0TBM0NH/MmbLnd30/FjWUq4=
 github.com/blang/semver v3.5.1+incompatible h1:cQNTCjp13qL8KC3Nbxr/y2Bqb63oX6wdnnjpJbkM4JQ=
 github.com/blang/semver v3.5.1+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
-github.com/blesswinsamuel/godo v0.0.0-20261126180306-f6d94d56201e h1:fz/szZKM+Xc6azaVp7iBN2cPptB6y5ao0wCITOjXX3w=
-github.com/blesswinsamuel/godo v0.0.0-20261126180306-f6d94d56201e/go.mod h1:xQsWpVCCbkDrWisHA72hPzPlnC+4W5w/McZY5ij9uvU=
+github.com/blesswinsamuel/godo v0.0.0-20261127022226-7f81b86af99d h1:UYOdpVE7poOqAy4ONOTZZFdsfNg+hC5NEjSWeaj1kGk=
+github.com/blesswinsamuel/godo v0.0.0-20261127022226-7f81b86af99d/go.mod h1:xQsWpVCCbkDrWisHA72hPzPlnC+4W5w/McZY5ij9uvU=
 github.com/cenkalti/backoff/v4 v4.2.1 h1:y4OZtCnogmCPw98Zjyt5a6+QwPLGkiQsYW5oUqylYbM=
 github.com/cenkalti/backoff/v4 v4.2.1/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=

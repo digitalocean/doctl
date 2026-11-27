@@ -33,7 +33,7 @@ func (s *SandboxWorkspace) JSON(out io.Writer) error {
 }
 
 func (s *SandboxWorkspace) Cols() []string {
-	return []string{"ID", "Name", "State", "SizeLimitGiB", "AttachedSandbox", "BytesUsed", "Created"}
+	return []string{"ID", "Name", "State", "SizeLimitGiB", "AttachedSandbox", "Created"}
 }
 
 func (s *SandboxWorkspace) ColMap() map[string]string {
@@ -43,7 +43,6 @@ func (s *SandboxWorkspace) ColMap() map[string]string {
 		"State":           "State",
 		"SizeLimitGiB":    "Size Limit (GiB)",
 		"AttachedSandbox": "Attached Sandbox",
-		"BytesUsed":       "Bytes Used",
 		"Created":         "Created At",
 	}
 }
@@ -57,7 +56,6 @@ func (s *SandboxWorkspace) KV() []map[string]any {
 			"State":           FormatSandboxWorkspaceState(w.State),
 			"SizeLimitGiB":    w.SizeLimitGiB,
 			"AttachedSandbox": w.AttachedSandboxID,
-			"BytesUsed":       w.Used(),
 			"Created":         w.CreatedAt.UTC().Format(time.RFC3339),
 		})
 	}

@@ -150,4 +150,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
-replace github.com/digitalocean/godo => github.com/blesswinsamuel/godo v0.0.0-20261126180306-f6d94d56201e
+replace github.com/digitalocean/godo => github.com/blesswinsamuel/godo v0.0.0-20261127022226-7f81b86af99d
