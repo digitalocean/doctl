@@ -62,7 +62,7 @@ func AgentTriggers() *Command {
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerOutputEmail, "", "", "Destination email when output-mode=email")
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerOutputSlackWebhook, "", "", "Slack incoming webhook URL when output-mode=slack")
 	AddStringFlag(cmdCreate, doctl.ArgAgentSpec, "", "", "Path to agents.yaml manifest for session-mode=fresh (\"-\" reads stdin). ${VAR} references are resolved from the local environment at create time and stored expanded.")
-	AddStringFlag(cmdCreate, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to use as the session template for session-mode=fresh, instead of --spec. Its manifest is copied into this trigger at create time.")
+	AddStringFlag(cmdCreate, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to use as the session template for session-mode=fresh, instead of --spec. Its manifest is copied into this trigger as stored; ${VAR} references are not resolved from the local environment (unlike --spec).")
 	AddStringSliceFlag(cmdCreate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	AddStringFlag(cmdCreate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Paused session ID for session-mode=reuse")
 	cmdCreate.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
@@ -89,7 +89,7 @@ func AgentTriggers() *Command {
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerOutputEmail, "", "", "Destination email when output-mode=email")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerOutputSlackWebhook, "", "", "Slack incoming webhook URL when output-mode=slack")
 	AddStringFlag(cmdUpdate, doctl.ArgAgentSpec, "", "", "Updated agents.yaml manifest for fresh triggers (\"-\" reads stdin). ${VAR} references are resolved from the local environment at update time and stored expanded.")
-	AddStringFlag(cmdUpdate, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config whose manifest becomes this trigger's session template, instead of --spec.")
+	AddStringFlag(cmdUpdate, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config whose manifest becomes this trigger's session template, instead of --spec. Copied as stored; ${VAR} references are not resolved from the local environment (unlike --spec).")
 	AddStringSliceFlag(cmdUpdate, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
 	AddStringFlag(cmdUpdate, doctl.ArgAgentTriggerBoundSessionID, "", "", "Updated bound session ID for reuse triggers")
 	cmdUpdate.MarkFlagsMutuallyExclusive(doctl.ArgAgentSpec, doctl.ArgAgentFromConfig)
@@ -722,12 +722,10 @@ func agentTriggerCreateRequest(c *CmdConfig) (*godo.HostedAgentTriggerCreateRequ
 // Agent Config with --from-config. Returns nil when neither was given, which
 // create treats as an error and update treats as "leave it alone".
 //
-// --from-config is a client-side copy, not a link: HostedAgentTriggerCreateRequest
-// has no config field, so the config's manifest is fetched and sent as the
-// SessionTemplate exactly as --spec would be. That means the copy is taken once,
-// and the config's server-held secret values are not part of it (they are never
-// returned to a client), so --secret must supply them here too. A real
-// backend-side config reference would remove both caveats.
+// --from-config is a client-side copy, not a link: the API has no config field,
+// so the manifest is fetched and sent as SessionTemplate. Server-held secrets
+// are never returned, so --secret must supply them. Unlike --spec, ${VAR} in a
+// server-fetched manifest is left unresolved (VULN-5833).
 func agentTriggerSessionTemplate(c *CmdConfig) ([]byte, error) {
 	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAgentSpec)
 	if err != nil {
@@ -767,12 +765,8 @@ func agentTriggerSessionTemplate(c *CmdConfig) ([]byte, error) {
 		if cfg == nil || len(bytes.TrimSpace(cfg.Manifest)) == 0 {
 			return nil, fmt.Errorf("agent config %s has no manifest to copy into this trigger", configRef)
 		}
-		// The config API returns the manifest as JSON, which the create
-		// endpoints accept interchangeably with YAML.
-		manifest, err = expandManifestEnv(cfg.Manifest)
-		if err != nil {
-			return nil, err
-		}
+		// JSON/YAML both accepted; do not expand ${VAR} from local env.
+		manifest = cfg.Manifest
 	} else {
 		manifest, err = readManifest(os.Stdin, specPath)
 		if err != nil {
