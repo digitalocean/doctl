@@ -557,7 +557,7 @@ func Agents() *Command {
 	AddStringFlag(cmdList, doctl.ArgAgentStatus, "", "", "Filter by session status (e.g. SESSION_STATUS_READY, SESSION_STATUS_DESTROYED)")
 	AddStringFlag(cmdList, doctl.ArgAgentName, "", "", "Filter by session name")
 	AddStringFlag(cmdList, doctl.ArgAgentParentSessionID, "", "", "Filter to forked children of this parent session ID or name")
-	AddStringFlag(cmdList, doctl.ArgAgentPausedBy, "", "", "Filter to paused sessions with this pause reason (zero-balance, idle, manual). Implies --status SESSION_STATUS_PAUSED. The API has no pause-reason filter, so this is applied to each returned page: a page can come back empty while later pages still hold matches.")
+	AddStringFlag(cmdList, doctl.ArgAgentPausedBy, "", "", "Filter to paused sessions with this pause reason: zero-balance (paused by the prepayment gate), idle, or manual. Implies --status SESSION_STATUS_PAUSED. The API has no pause-reason filter, so this is applied to each returned page: a page can come back empty while later pages still hold matches.")
 	cmdList.Example = agentCLI + ` list --page-size 10 --status SESSION_STATUS_READY; ` + agentCLI + ` list --name demo-agent; ` + agentCLI + ` list --parent-session-id sess_abc123; ` + agentCLI + ` list --paused-by zero-balance`
 
 	CmdBuilder(cmd, RunAgentsShow, "show <session>",
@@ -706,7 +706,7 @@ Where sessions have no public URL yet (the command says so), `+"`"+agentCLI+` po
 	cmdCanvas.Example = agentCLI + ` canvas my-session --open`
 
 	cmdBalance := CmdBuilder(cmd, RunAgentsBalance, "balance",
-		"Show your team's prepayment balance and gate status",
+		"Show your team's prepayment balance, credit, and prepay-flow status",
 		agentsBalanceHelpMD,
 		Writer, agentsNS(
 			displayerType(&displayers.HarnessPrepayBalance{}))...)
@@ -811,9 +811,9 @@ const agentWorkspaceFlagDesc = "ID of a persistent workspace to keep this sessio
 // one place, because it is spending consent: every command that offers it —
 // create, config start-session, launch, update — has to describe the same
 // scope and the same way to revoke it.
-const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once your team's prepayment balance is topped off after a low-balance pause. " +
+const agentResumeOnTopoffFlagDesc = "Let DigitalOcean resume this session automatically once funds are added after the prepayment gate pauses it. " +
 	"Off by default and per-session (never inherited from an Agent Config or by a fork). Revoke it with --resume-on-topoff=false. " +
-	"Only a session paused for low balance whose last run was unfinished is resumed; one you paused yourself, or that idled out, stays paused."
+	"Only a session paused by the prepayment gate whose last run was unfinished is resumed; one you paused yourself, or that idled out, stays paused."
 
 func markAgentCreationSourcesExclusive(cmd *Command) {
 	cmd.MarkFlagsMutuallyExclusive(doctl.ArgAgentHarness, doctl.ArgAgentSpec)

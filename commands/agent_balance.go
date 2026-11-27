@@ -27,13 +27,17 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-const agentsBalanceHelpMD = `Shows your team's prepayment balance and whether the prepayment gate is currently blocking Harness Runtime.
+const agentsBalanceHelpMD = `Shows your team's prepayment balance, available credit, and prepay-flow status.
 
-Harness Runtime sessions are paid for from a single team-wide prepayment balance shared with the rest of your DigitalOcean usage. When that balance runs out, running sessions are paused with their work saved, and commands that would spend — ` + "`create`" + `, ` + "`launch`" + `, ` + "`resume`" + `, ` + "`fork`" + `, ` + "`exec`" + `, and sending a prompt — fail until funds are added.
+Harness Runtime sessions are paid for from your team's credit and its team-wide prepayment balance, which is shared with the rest of your DigitalOcean usage. When the two no longer cover your usage, running sessions are paused with their work saved, and commands that would spend — ` + "`create`" + `, ` + "`launch`" + `, ` + "`resume`" + `, ` + "`fork`" + `, ` + "`exec`" + `, and sending a prompt — fail until funds are added.
 
 This is a point-in-time read, not a live meter; run it again for a fresh figure. Reading it requires a token with the ` + "`billing:read`" + ` scope. When the balance cannot be read, the command exits non-zero and explains the cause, such as a token that lacks that scope, an invalid or expired token, or a team role that cannot read billing.
 
-Note ` + "`doctl balance get`" + ` is a different number: it reports the classic account ledger, not the prepayment wallet that gates Harness Runtime.`
+Note ` + "`doctl balance get`" + ` is a different number: it reports the classic account ledger, not the prepayment wallet that gates Harness Runtime.
+
+The Balance column is your cash prepayment. The Available Credit column is your Inference & Agents credit, trial credit, and available subscription credit added together. In JSON output it is ` + "`status.available_credit`" + `. The Control Panel's Inference & Agents balance counts only Inference & Agents credit, so the two figures differ when you also have trial or subscription credit.
+
+Status reflects the prepay-flow flag and may differ from what the gate enforces. The gate counts cash and credit together, and no figure in this table decides it, so Status can read OK while a command that spends fails with a 402, or Blocked while Available Credit is positive.`
 
 // RunAgentsBalance runs `doctl harness-runtime balance`.
 func RunAgentsBalance(c *CmdConfig) error {

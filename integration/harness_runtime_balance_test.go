@@ -143,6 +143,131 @@ var _ = suite("harness-runtime/balance", func(t *testing.T, when spec.G, it spec
 		})
 	})
 
+	// APICLI-5566: a team on the credit prepay flow holds no cash prepayment,
+	// so balance is 0.00, while billing returns the credit it spends as
+	// available_credit.
+	when("the team pays from credit", func() {
+		it.Before(func() {
+			respond = func(w http.ResponseWriter) {
+				w.Write([]byte(`{
+					"config": {
+						"spend_limit": "0.00",
+						"prepay_amount": "0.00",
+						"prepay_threshold": "0.00"
+					},
+					"status": {
+						"balance": "0.00",
+						"eligible": true,
+						"month_to_date_balance": "38.66",
+						"available_credit": "9.29"
+					}
+				}`))
+			}
+		})
+
+		it("shows the available credit next to the cash balance", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"harness-runtime", "balance",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+			expect.Equal(strings.TrimSpace(harnessBalanceCredit), strings.TrimSpace(string(output)))
+		})
+
+		it("keeps available_credit in the JSON output", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"harness-runtime", "balance",
+				"-o", "json",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+			expect.JSONEq(harnessBalanceCreditJSON, string(output))
+		})
+	})
+
+	// Status reads billing's deprecated prepay-flow flag, status.blocked, not
+	// the blocked state the 402 enforces, so it can disagree with the figures
+	// beside it in either direction. This pair pins that output as intended,
+	// and the help says so.
+	when("the prepay-flow flag is set while the team holds credit", func() {
+		it.Before(func() {
+			respond = func(w http.ResponseWriter) {
+				w.Write([]byte(`{
+					"config": {
+						"spend_limit": "0.00",
+						"prepay_amount": "0.00",
+						"prepay_threshold": "0.00"
+					},
+					"status": {
+						"balance": "0.00",
+						"blocked": true,
+						"eligible": true,
+						"month_to_date_balance": "38.66",
+						"available_credit": "9.29"
+					}
+				}`))
+			}
+		})
+
+		it("shows Blocked next to the positive credit", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"harness-runtime", "balance",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+			expect.Equal(strings.TrimSpace(harnessBalanceBlockedWithCredit), strings.TrimSpace(string(output)))
+		})
+	})
+
+	when("the prepay-flow flag is clear while the team holds nothing", func() {
+		it.Before(func() {
+			respond = func(w http.ResponseWriter) {
+				w.Write([]byte(`{
+					"config": {
+						"spend_limit": "0.00",
+						"prepay_amount": "0.00",
+						"prepay_threshold": "0.00"
+					},
+					"status": {
+						"balance": "0.00",
+						"eligible": true,
+						"month_to_date_balance": "0.00",
+						"available_credit": "0.00"
+					}
+				}`))
+			}
+		})
+
+		it("shows OK next to the zero figures", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"harness-runtime", "balance",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+			expect.Equal(strings.TrimSpace(harnessBalanceOKWithNothing), strings.TrimSpace(string(output)))
+		})
+	})
+
+	it("says in its help that Status may differ from the gate", func() {
+		cmd := exec.Command(builtBinaryPath, "harness-runtime", "balance", "--help")
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+		expect.Contains(string(output), "Status reflects the prepay-flow flag and may differ from what the gate enforces.")
+	})
+
 	when("the token cannot read billing", func() {
 		it.Before(func() {
 			respond = func(w http.ResponseWriter) {
@@ -175,18 +300,52 @@ var _ = suite("harness-runtime/balance", func(t *testing.T, when spec.G, it spec
 })
 
 const harnessBalanceOK string = `
-Balance    Month-to-date Balance    Auto Top-off    Status
-$42.75     $8.10                    off             OK
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+$42.75     unknown             $8.10                    off             OK
 `
 
 const harnessBalanceBlocked string = `
-Balance    Month-to-date Balance    Auto Top-off    Status
-$0.00      $0.00                    off             Blocked — add funds
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+$0.00      unknown             $0.00                    off             Blocked — add funds
 `
 
 const harnessBalanceAutoTopOff string = `
-Balance    Month-to-date Balance    Auto Top-off                      Status
-$3.00      $22.00                   on (at $5.00, charging $25.00)    OK
+Balance    Available Credit    Month-to-date Balance    Auto Top-off                      Status
+$3.00      unknown             $22.00                   on (at $5.00, charging $25.00)    OK
+`
+
+const harnessBalanceCredit string = `
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+$0.00      $9.29               $38.66                   off             OK
+`
+
+const harnessBalanceCreditJSON string = `{
+  "config": {
+    "spend_limit": "0.00",
+    "is_auto_prepay_enabled": false,
+    "prepay_amount": "0.00",
+    "prepay_threshold": "0.00",
+    "created_at": "0001-01-01T00:00:00Z",
+    "updated_at": "0001-01-01T00:00:00Z"
+  },
+  "status": {
+    "balance": "0.00",
+    "is_auto_prepay_enabled": false,
+    "blocked": false,
+    "eligible": true,
+    "month_to_date_balance": "38.66",
+    "available_credit": "9.29"
+  }
+}`
+
+const harnessBalanceBlockedWithCredit string = `
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+$0.00      $9.29               $38.66                   off             Blocked — add funds
+`
+
+const harnessBalanceOKWithNothing string = `
+Balance    Available Credit    Month-to-date Balance    Auto Top-off    Status
+$0.00      $0.00               $0.00                    off             OK
 `
 
 const harnessBalanceUnreadable string = `
