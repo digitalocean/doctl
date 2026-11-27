@@ -630,6 +630,18 @@ const (
 	// ArgSandboxID filters `sandbox snapshot list` to the snapshots of one sandbox.
 	ArgSandboxID = "sandbox-id"
 
+	// ArgSandboxWorkspaceID is the persistent workspace a sandbox is created with.
+	ArgSandboxWorkspaceID = "workspace-id"
+
+	// ArgSandboxWorkspaceName is the name given to a sandbox workspace.
+	ArgSandboxWorkspaceName = "name"
+
+	// ArgSandboxWorkspaceSizeLimitGiB is the size limit of a sandbox workspace, in GiB.
+	ArgSandboxWorkspaceSizeLimitGiB = "size-limit-gib"
+
+	// ArgSandboxWorkspaceState filters `sandbox workspace list` to one state.
+	ArgSandboxWorkspaceState = "state"
+
 	// ArgForce forces confirmation on actions
 	ArgForce = "force"
 

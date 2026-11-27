@@ -28,6 +28,10 @@ type SandboxesService interface {
 	SignalCommand(context.Context, string, int64, SandboxCommandSignal) (*Response, error)
 	WriteCommandStdin(context.Context, string, int64, *SandboxCommandStdinRequest) (*Response, error)
 
+	StartExec(context.Context, string, *SandboxExecStartRequest) (*SandboxExecStream, *Response, error)
+	WriteExecStdin(context.Context, string, string, *SandboxExecStdinRequest) (int64, *Response, error)
+	ResizeExec(context.Context, string, string, int64, int64) (*Response, error)
+
 	ListTemplates(context.Context, *SandboxTemplateListOptions) (*SandboxTemplateList, *Response, error)
 	CreateTemplate(context.Context, *SandboxTemplateCreateRequest) (*SandboxTemplate, *Response, error)
 	GetTemplate(context.Context, string) (*SandboxTemplate, *Response, error)
@@ -35,10 +39,25 @@ type SandboxesService interface {
 	DeleteTemplate(context.Context, string) (*Response, error)
 	ListTemplateBuilds(context.Context, string, *SandboxTemplateListOptions) (*SandboxTemplateBuildList, *Response, error)
 	GetTemplateBuild(context.Context, string, string) (*SandboxTemplateBuild, *Response, error)
+
+	ListWorkspaces(context.Context, *SandboxWorkspaceListOptions) (*SandboxWorkspaceList, *Response, error)
+	CreateWorkspace(context.Context, *SandboxWorkspaceCreateRequest) (*SandboxWorkspace, *Response, error)
+	GetWorkspace(context.Context, string) (*SandboxWorkspace, *Response, error)
+	DeleteWorkspace(context.Context, string) (*Response, error)
+
 	CreateSnapshot(context.Context, string, *SandboxSnapshotCreateRequest) (*SandboxSnapshot, *Response, error)
 	GetSnapshot(context.Context, string) (*SandboxSnapshot, *Response, error)
 	ListSnapshots(context.Context, *SandboxSnapshotListOptions) (*SandboxSnapshotList, *Response, error)
 	DeleteSnapshot(context.Context, string) (*Response, error)
+
+	UploadFile(context.Context, string, *SandboxFileUploadRequest) (*SandboxFileUpload, *Response, error)
+	DownloadFile(context.Context, string, *SandboxFileDownloadRequest) ([]byte, *Response, error)
+	ListFiles(context.Context, string, string, int) ([]SandboxFileEntry, *Response, error)
+	GetFileInfo(context.Context, string, string) (*SandboxFileEntry, *Response, error)
+	FileExists(context.Context, string, string) (bool, *Response, error)
+	MakeDirectory(context.Context, string, string) (*SandboxDirectoryCreated, *Response, error)
+	MoveFile(context.Context, string, string, string) (*SandboxFileEntry, *Response, error)
+	RemoveFile(context.Context, string, string) (*Response, error)
 }
 
 // SandboxesServiceOp handles communication with the sandbox related methods of
@@ -86,6 +105,8 @@ type SandboxCreateRequest struct {
 	AllowInternetAccess *bool `json:"allow_internet_access,omitempty"`
 	// EnvVars are environment variables for the sandbox. The values are secrets.
 	EnvVars map[string]string `json:"env_vars,omitempty"`
+	// WorkspaceID attaches an available persistent workspace to the sandbox.
+	WorkspaceID string `json:"workspace_id,omitempty"`
 }
 
 // SandboxListOptions specifies the optional parameters to List.

@@ -87,6 +87,21 @@ func (mr *MockSandboxesServiceMockRecorder) CreateTemplate(req any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTemplate", reflect.TypeOf((*MockSandboxesService)(nil).CreateTemplate), req)
 }
 
+// CreateWorkspace mocks base method.
+func (m *MockSandboxesService) CreateWorkspace(req *godo.SandboxWorkspaceCreateRequest) (*do.SandboxWorkspace, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateWorkspace", req)
+	ret0, _ := ret[0].(*do.SandboxWorkspace)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateWorkspace indicates an expected call of CreateWorkspace.
+func (mr *MockSandboxesServiceMockRecorder) CreateWorkspace(req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkspace", reflect.TypeOf((*MockSandboxesService)(nil).CreateWorkspace), req)
+}
+
 // Delete mocks base method.
 func (m *MockSandboxesService) Delete(sandboxID string) error {
 	m.ctrl.T.Helper()
@@ -127,6 +142,20 @@ func (m *MockSandboxesService) DeleteTemplate(templateID string) error {
 func (mr *MockSandboxesServiceMockRecorder) DeleteTemplate(templateID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTemplate", reflect.TypeOf((*MockSandboxesService)(nil).DeleteTemplate), templateID)
+}
+
+// DeleteWorkspace mocks base method.
+func (m *MockSandboxesService) DeleteWorkspace(workspaceID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWorkspace", workspaceID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteWorkspace indicates an expected call of DeleteWorkspace.
+func (mr *MockSandboxesServiceMockRecorder) DeleteWorkspace(workspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkspace", reflect.TypeOf((*MockSandboxesService)(nil).DeleteWorkspace), workspaceID)
 }
 
 // Get mocks base method.
@@ -187,6 +216,21 @@ func (m *MockSandboxesService) GetTemplateBuild(templateID, buildID string) (*do
 func (mr *MockSandboxesServiceMockRecorder) GetTemplateBuild(templateID, buildID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTemplateBuild", reflect.TypeOf((*MockSandboxesService)(nil).GetTemplateBuild), templateID, buildID)
+}
+
+// GetWorkspace mocks base method.
+func (m *MockSandboxesService) GetWorkspace(workspaceID string) (*do.SandboxWorkspace, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWorkspace", workspaceID)
+	ret0, _ := ret[0].(*do.SandboxWorkspace)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWorkspace indicates an expected call of GetWorkspace.
+func (mr *MockSandboxesServiceMockRecorder) GetWorkspace(workspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkspace", reflect.TypeOf((*MockSandboxesService)(nil).GetWorkspace), workspaceID)
 }
 
 // List mocks base method.
@@ -262,6 +306,21 @@ func (m *MockSandboxesService) ListTemplates() (do.SandboxTemplates, error) {
 func (mr *MockSandboxesServiceMockRecorder) ListTemplates() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTemplates", reflect.TypeOf((*MockSandboxesService)(nil).ListTemplates))
+}
+
+// ListWorkspaces mocks base method.
+func (m *MockSandboxesService) ListWorkspaces(state godo.SandboxWorkspaceState) (do.SandboxWorkspaces, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWorkspaces", state)
+	ret0, _ := ret[0].(do.SandboxWorkspaces)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListWorkspaces indicates an expected call of ListWorkspaces.
+func (mr *MockSandboxesServiceMockRecorder) ListWorkspaces(state any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkspaces", reflect.TypeOf((*MockSandboxesService)(nil).ListWorkspaces), state)
 }
 
 // Pause mocks base method.
