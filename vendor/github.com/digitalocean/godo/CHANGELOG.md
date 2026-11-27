@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.247.0] - 2026-11-26
+
+- #1250 - @sanjaysingh916 - hosted agents: Changes.Skills and live skills updates in UpdateSessionConfig (MARSOHS-3133)
+- #1245 - @rak16 - microvms: add Fork and the fork_id and forked_from list filters (APICLI-5356)
+- #1251 - @mishraishika24-pixel - hosted agents: add Session.Mutability and document custom MCP server updates
+- #1248 - @BadhriDO - hosted agents: document switching a session's OAuth connection (MARSOHS-3106)
+
 ## [1.246.0] - 2026-11-25
 
 - #1244 - @rishabhsingh-do - hosted agents: document and test live permissions updates in UpdateSessionConfig (MARSOHS-2938)

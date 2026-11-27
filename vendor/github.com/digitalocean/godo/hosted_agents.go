@@ -124,10 +124,11 @@ type HostedAgentsService interface {
 	GetSession(context.Context, string) (*HostedAgentSession, *Response, error)
 	// UpdateSession patches session-scoped settings on an existing session and
 	// returns the updated snapshot. Never touches the agent manifest or config;
-	// use UpdateSessionConfig to change tools, env, secrets or permissions.
+	// use UpdateSessionConfig to change tools, env, secrets, permissions or
+	// skills.
 	UpdateSession(context.Context, string, *HostedAgentSessionUpdateRequest) (*HostedAgentSession, *Response, error)
 	// UpdateSessionConfig patches the live configuration of a session (tools,
-	// env, secrets, permissions) from a partial manifest YAML. The server
+	// env, secrets, permissions, skills) from a partial manifest YAML. The server
 	// answers 202 with outcome ACCEPTED and the session in
 	// SESSION_STATUS_UPDATING; callers poll GetSession until the status leaves
 	// UPDATING and then read Session.Update. An unchanged manifest answers 200
@@ -587,6 +588,14 @@ type HostedAgentSessionMutability struct {
 	// change alters its environment. False until the session's agent supports it, and for a session
 	// created before that.
 	CustomTools bool `json:"custom_tools"`
+	// Skills: the skills section, the inline skill list replaced as a whole,
+	// can change. Only claude-code, codex and opencode reload skills live.
+	// False until the session's agent supports it, and for a session created
+	// before that. While skills updates are enabled team by team, a team that
+	// has them can also change the skills of a claude-code, codex or opencode
+	// session that reads false, unless it was created before this field
+	// existed.
+	Skills bool `json:"skills"`
 }
 
 // HostedAgentsRegionalBaseURL returns the base URL of the API host for one
@@ -756,7 +765,7 @@ type HostedAgentSessionFromEnvironmentRequest = HostedAgentSessionFromConfigRequ
 // HostedAgentSessionUpdateRequest is the body for PATCH
 // /v2/harness-runtime/sessions/{session_id}: an allowlisted subset of session-scoped
 // settings (see HostedAgentsService.UpdateSessionConfig for live config
-// changes such as tools, env, secrets and permissions). The server rejects
+// changes such as tools, env, secrets, permissions and skills). The server rejects
 // unknown top-level keys, and rejects an empty object, so every field is a
 // pointer: nil omits it and leaves the server-side value untouched.
 type HostedAgentSessionUpdateRequest struct {
@@ -1178,7 +1187,7 @@ type HostedAgentWorkspaceTransferCancelResponse struct {
 // HostedAgentSessionConfigUpdateRequest is the body for PATCH
 // /v2/harness-runtime/sessions/{session_id} when changing live configuration.
 // ManifestYAML holds only the sections to change (tools, env, secrets,
-// permissions); absent sections are untouched. It cannot be combined with
+// permissions, skills); absent sections are untouched. It cannot be combined with
 // resume_on_topoff. In secrets, {source: oauth, provider, actor} switches an
 // OAuth secret that was created with actor to another connection of the same
 // provider.
@@ -1253,13 +1262,15 @@ type HostedAgentSessionConfigPermissionsChanges struct {
 
 // HostedAgentSessionConfigChanges summarises changes per manifest section.
 // Secrets.Changed names the secrets that got a new value or were bound to
-// another URL or scheme; it never carries values.
+// another URL or scheme; it never carries values. Skills names inline skills;
+// Skills.Changed is a kept name whose definition changed, never its content.
 type HostedAgentSessionConfigChanges struct {
 	Tools       *HostedAgentSessionConfigSectionChanges     `json:"tools,omitempty"`
 	Env         *HostedAgentSessionConfigSectionChanges     `json:"env,omitempty"`
 	Secrets     *HostedAgentSessionConfigSectionChanges     `json:"secrets,omitempty"`
 	Egress      *HostedAgentSessionConfigEgressChanges      `json:"egress,omitempty"`
 	Permissions *HostedAgentSessionConfigPermissionsChanges `json:"permissions,omitempty"`
+	Skills      *HostedAgentSessionConfigSectionChanges     `json:"skills,omitempty"`
 }
 
 // HostedAgentSessionConfigUpdate describes one config update (or rollback) of a session.
@@ -1460,24 +1471,25 @@ func (s *HostedAgentsServiceOp) UpdateSession(ctx context.Context, sessionID str
 }
 
 // UpdateSessionConfig patches the live configuration of a session from a
-// partial manifest YAML (tools, env, secrets, egress, permissions). In tools,
-// Action Gateway (do.actions) entries can change. A custom MCP server can be
-// added, modified or removed only where Session.Mutability.CustomTools is true
-// (and Tools is too); otherwise the update is a 409. Send the session's other
-// custom MCP servers back exactly as they are. The response carries the
-// session, the outcome (ACCEPTED on HTTP 202, UNCHANGED on HTTP 200) and any
-// warnings. godo does not wait: on ACCEPTED the session is
+// partial manifest YAML (tools, env, secrets, egress, permissions, skills). In
+// tools, Action Gateway (do.actions) entries can change. A custom MCP server
+// can be added, modified or removed only where Session.Mutability.CustomTools
+// is true (and Tools is too); otherwise the update is a 409. Send the
+// session's other custom MCP servers back exactly as they are. The response
+// carries the session, the outcome (ACCEPTED on HTTP 202, UNCHANGED on HTTP
+// 200) and any warnings. godo does not wait: on ACCEPTED the session is
 // SESSION_STATUS_UPDATING and the caller polls GetSession until the status
 // leaves UPDATING, then reads Session.Update. See the API error statuses: 400
-// (invalid patch, including a top-level model section, permissions: null or a
-// malformed model name; change the model through env), 403 (feature not
-// enabled, including permission updates for a manifest with a permissions
-// section, even one that matches the session's policy), 409
-// (session status does not allow an update, a turn or approval is in
+// (invalid patch, including a top-level model section, permissions: null,
+// skills: null, an invalid skills list or a malformed model name; change the
+// model through env), 403 (feature not enabled, including permission updates
+// for a manifest with a permissions section, even one that matches the
+// session's policy, and skills updates for a manifest with a skills section),
+// 409 (session status does not allow an update, a turn or approval is in
 // progress, the session's mutability does not allow the change, including a
 // custom MCP server change where Mutability.CustomTools is false, or the agent
-// can't apply a permissions change), 422 (requires a new session, including
-// changing egress.vpc_uuid or egress.subnet_uuid).
+// can't apply a permissions or skills change), 422 (requires a new session,
+// including changing egress.vpc_uuid or egress.subnet_uuid).
 //
 // A custom MCP server change where Mutability.CustomTools is true restarts the
 // agent when it alters the agent's environment (a server added, removed or
@@ -1513,6 +1525,25 @@ func (s *HostedAgentsServiceOp) UpdateSession(ctx context.Context, sessionID str
 // error message names the changes to drop. A session created before live
 // permission updates were released also gets a 409: create a new session.
 // Session.Update.Changes.Permissions lists the default and rules that changed.
+//
+// skills is the full list of inline skills, in the same form as at create
+// (name, description, instructions, and optionally license, metadata and
+// allowed_tools), so a skill left out is removed. "skills: []" removes every
+// skill; "skills: null" is a 400, and the list is checked with the same rules
+// and limits as at create. The same skills in another order are UNCHANGED.
+// The agent reloads its skills without a restart, so the conversation
+// continues. Only claude-code, codex and opencode sessions take skills (409
+// otherwise, even for an unchanged list, and for a session created before live
+// updates were tracked; see Session.Mutability.Skills), and skills updates
+// must be enabled for the team (403 otherwise). If the agent
+// refuses the new skills (a skill named like one the session's repository
+// already ships), the update ends FAILED with update_failed and Reverted set,
+// and the session keeps its previous skills: rename the skill and send the
+// update again. Only an agent that can't reload skills live ends
+// requires_new_session. When the same update also changes permissions it ends
+// FAILED with update_failed, and sending the two changes separately shows
+// which one the agent can't take. Session.Update.Changes.Skills names the
+// skills added, removed or changed, never their content.
 //
 // A URL-bound secret can be rotated (a new value as a string), moved
 // ({value, url, scheme}), added ({value, url}; scheme defaults to bearer) or
