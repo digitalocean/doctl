@@ -746,7 +746,7 @@ func addAgentCreationFlags(cmd *Command) {
 	AddStringFlag(cmd, doctl.ArgAgentSpec, "f", "", `Path to an agent manifest in YAML or JSON, equivalently given as a positional argument or --file. Defaults to ./agents.yaml when present. Prefer flat format (top-level name + harness), e.g. "name: my-session\nharness: opencode"; agent is the original name of harness and still works. Legacy apiVersion/kind/metadata/spec envelopes still work. Set to "-" to read from stdin. ${VAR} references are resolved from the local environment. Mutually exclusive with --harness and --from-config.`)
 	acceptFileAliasFor(cmd)
 	AddStringFlag(cmd, doctl.ArgAgentFromConfig, "", "", "Name or ID of an existing Agent Config to create the session from. Requires --name. Mutually exclusive with --harness and --spec.")
-	AddStringFlag(cmd, doctl.ArgAgentRepo, "", "", "GitHub repository to clone into the workspace (https://github.com/org/repo or org/repo). Only with --harness or --spec.")
+	AddStringFlag(cmd, doctl.ArgAgentRepo, "", "", "GitHub repository (https://github.com/org/repo or org/repo). Cloned into /workspace/<repo> once the session is ready, before --prompt is sent. Public repositories need nothing else. A private repository needs GitHub connected (doctl harness-runtime auth github) and "+githubTokenOptIn+", which gives the session, and so the agent, your GitHub token as GITHUB_TOKEN; the agent can also push with it. Only with --harness or --spec.")
 	AddStringFlag(cmd, doctl.ArgAgentTriggerPrompt, "", "", "Initial prompt to send once the session is ready")
 	AddStringFlag(cmd, doctl.ArgAgentName, "", "", "Name for the new session. On flat manifests sets top-level name; on legacy envelopes sets metadata.name. If omitted, the server auto-generates a name. Must be unique among your team's active sessions. Required with --from-config.")
 	AddStringSliceFlag(cmd, doctl.ArgAgentSecret, "", nil, agentSecretFlagDesc)
@@ -1082,6 +1082,13 @@ func resolveAgentCreationSource(c *CmdConfig) (*agentCreationSource, error) {
 	if configRef != "" && repo != "" {
 		return nil, fmt.Errorf("--%s cannot be used with --%s; put the repo in the Agent Config instead", doctl.ArgAgentRepo, doctl.ArgAgentFromConfig)
 	}
+	// Validate before anything is created: the name ends up in a clone URL and
+	// a path inside the sandbox.
+	if repo != "" {
+		if repo, err = normalizeHarnessRepoRef(repo); err != nil {
+			return nil, err
+		}
+	}
 	if configRef != "" && len(secrets) > 0 {
 		return nil, fmt.Errorf("--%s cannot be used with --%s; an Agent Config already holds its secret values, captured when the config was created", doctl.ArgAgentSecret, doctl.ArgAgentFromConfig)
 	}
@@ -1275,8 +1282,11 @@ func agentSourcesExclusiveErr() error {
 // `launch` differ only in what they do with the session afterwards.
 func createAgentSession(c *CmdConfig, src *agentCreationSource, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if src.repo != "" {
-		if err := maybeOfferGitHubAuth(c); err != nil {
-			return nil, err
+		warnPromptBeforeClone(src)
+		if manifestSecretValues(src.manifest)[githubTokenSecret] == githubOAuthRef {
+			if err := ensureGitHubConnected(c); err != nil {
+				return nil, err
+			}
 		}
 	}
 	sess, err := createAgentSessionIn(c, src, prog)
@@ -1422,6 +1432,10 @@ func RunAgentsCreate(c *CmdConfig) error {
 	}
 
 	if dryRun {
+		if src.repo != "" {
+			_, dest := repoClonePaths(src.repo)
+			fmt.Fprintf(execStderr, "Would clone %s into %s once the session is ready.\n", src.repo, dest)
+		}
 		return printResolvedManifest(c, src)
 	}
 	if err := refuseUnattendedAsk(c, src, onHITL); err != nil {
@@ -1456,24 +1470,16 @@ func RunAgentsCreate(c *CmdConfig) error {
 	// which silently dropped --prompt (the session was READY, the prompt never
 	// sent). Keep the no-wait shortcut when there is nothing to deliver;
 	// otherwise wait and send, then print the row.
-	if agentStructuredOutput(c) && src.prompt == "" && onHITL == "" {
+	if agentStructuredOutput(c) && src.prompt == "" && onHITL == "" && src.repo == "" {
 		return c.Display(&displayers.HostedAgentSession{Sessions: []do.HostedAgentSession{*sess}, Single: true})
 	}
 
-	readyAt := creationClock()
-	sess, err = waitForAgentSessionReady(c, sess, prog)
+	// Wait, clone --gh-repo, then send --prompt: the order is shared with launch.
+	sess, started, err := finishSessionStart(c, sess, src, prog)
 	if err != nil {
 		return err
 	}
-	timings.Ready = creationClock().Sub(readyAt)
-
-	promptAt := creationClock()
-	if err := sendInitialPrompt(c, sess.SessionID, src); err != nil {
-		return err
-	}
-	if src.prompt != "" {
-		timings.Prompt = creationClock().Sub(promptAt)
-	}
+	timings.Ready, timings.Clone, timings.Prompt = started.Ready, started.Clone, started.Prompt
 
 	if onHITL != "" {
 		return watchSessionHeadless(c, sess.SessionID, onHITL)
