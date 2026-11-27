@@ -84,6 +84,7 @@ func repoTestSession(id string) *do.HostedAgentSession {
 // expectRepoSession stubs create and readiness. Without the token opt-in there
 // is no GitHub connect check, so a StartProviderAuth call fails the test.
 func expectRepoSession(tm *tcMocks, id string) {
+	allowValidatePolicy(tm)
 	tm.hostedAgents.EXPECT().CreateSessionFromManifest(gomock.Any(), gomock.Any()).Return(repoTestSession(id), nil)
 	ready := repoTestSession(id)
 	ready.Status = godo.HostedAgentSessionStatusReady
@@ -91,6 +92,7 @@ func expectRepoSession(tm *tcMocks, id string) {
 }
 
 func repoTestSetup(t *testing.T) {
+	stubInteractiveTerminal(t, true)
 	prev := sessionReadyPollInterval
 	sessionReadyPollInterval = time.Millisecond
 	t.Cleanup(func() { sessionReadyPollInterval = prev })
@@ -475,6 +477,7 @@ func TestGitHubTokenIsOptIn(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			repoTestSetup(t)
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				allowValidatePolicy(tm)
 				tm.hostedAgents.EXPECT().CreateSessionFromManifest(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(m []byte, _ *godo.HostedAgentManifestCreateOptions) (*do.HostedAgentSession, error) {
 						assert.Equal(t, tc.want, strings.Contains(string(m), "GITHUB_TOKEN: oauth/github"), string(m))
@@ -505,6 +508,7 @@ func TestGitHubTokenOptInWithoutConnectionCreatesNoSession(t *testing.T) {
 	t.Cleanup(func() { askConnectGitHub = prevAsk })
 	askConnectGitHub = func() (bool, error) { return false, nil }
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		allowValidatePolicy(tm)
 		tm.hostedAgents.EXPECT().StartProviderAuth("github").
 			Return(&godo.HostedAgentProviderAuthStart{Provider: "github", Status: "pending", PollURL: "https://example.com/poll"}, nil)
 		config.Out = &bytes.Buffer{}

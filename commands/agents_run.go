@@ -869,7 +869,9 @@ func manifestIncludesPrompt(manifest []byte, prompt string) bool {
 
 // startSessionFromRawManifest uploads a manifest and creates a hosted session.
 // When prog is non-nil it prints Plano-style lifecycle steps around each phase.
-func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, prog *creationProgress) (*do.HostedAgentSession, error) {
+// permission is the permissions.default doctl generated, or empty when the
+// manifest is the caller's own; when set, the server's resolution of it is printed.
+func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, permission string, prog *creationProgress) (*do.HostedAgentSession, error) {
 	if prog != nil {
 		prog.step("Validating configuration…")
 	}
@@ -907,6 +909,20 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 		return nil, err
 	}
 
+	// After local validation, so a manifest that fails it never reaches the
+	// server, and on the expanded bytes create sends, secret values redacted:
+	// the policy does not read them, so they cross the wire once. Run
+	// alongside create so it adds no latency.
+	var permissionLine chan string
+	permissionCtx, cancelPermissionCheck := context.WithTimeout(context.Background(), permissionCheckTimeout)
+	defer cancelPermissionCheck()
+	if permission != "" {
+		permissionLine = make(chan string, 1)
+		go func() {
+			permissionLine <- appliedPermissionLine(permissionCtx, c, redactManifestSecrets(manifest), permission)
+		}()
+	}
+
 	var createOpt *godo.HostedAgentManifestCreateOptions
 	if openaiSessionID != "" || resumeOnTopoff {
 		createOpt = &godo.HostedAgentManifestCreateOptions{
@@ -927,6 +943,11 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 	} else {
 		sess, err = c.HostedAgents().CreateSessionFromManifest(manifest, createOpt)
 	}
+	if err != nil && permissionLine != nil {
+		// No session to describe; stop the check rather than wait on it.
+		cancelPermissionCheck()
+		<-permissionLine
+	}
 	if err != nil {
 		if sessionLimitErr(err) {
 			msg, _, _ := agentAPIError(err)
@@ -936,6 +957,10 @@ func startSessionFromRawManifest(c *CmdConfig, raw []byte, resumeOnTopoff bool, 
 	}
 	if prog != nil {
 		prog.ok(fmt.Sprintf("Session created · %s", displaySessionRef(sess)))
+	}
+	// After the progress line settles, so it does not land mid-spinner.
+	if permissionLine != nil {
+		fmt.Fprintln(uiEnv().ErrWriter(), <-permissionLine)
 	}
 	if sess != nil && sess.HostedAgentSession != nil {
 		printSessionCreateWarnings(sess.Warnings)
